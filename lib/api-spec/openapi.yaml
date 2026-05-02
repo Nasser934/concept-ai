@@ -1,0 +1,570 @@
+openapi: 3.1.0
+info:
+  # Do not change the title, if the title changes, the import paths will be broken
+  title: Api
+  version: 0.1.0
+  description: API specification
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: reports
+    description: Feasibility report operations
+  - name: notifications
+    description: Notification operations
+  - name: comments
+    description: Comment operations
+  - name: profiles
+    description: User profile operations
+  - name: ai
+    description: AI operations
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+
+  /reports:
+    get:
+      operationId: listReports
+      tags: [reports]
+      summary: List user's reports
+      responses:
+        "200":
+          description: List of reports
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ReportSummary"
+    post:
+      operationId: createReport
+      tags: [reports]
+      summary: Save a new report
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateReportBody"
+      responses:
+        "201":
+          description: Created report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReportCreated"
+
+  /reports/{id}:
+    get:
+      operationId: getReport
+      tags: [reports]
+      summary: Get a report by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReportRow"
+    delete:
+      operationId: deleteReport
+      tags: [reports]
+      summary: Delete a report
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Deleted
+
+  /reports/{id}/status:
+    patch:
+      operationId: updateReportStatus
+      tags: [reports]
+      summary: Update report status
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateReportStatusBody"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+
+  /reports/slug/{slug}:
+    get:
+      operationId: getReportBySlug
+      tags: [reports]
+      summary: Get a report by slug (public)
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReportRow"
+
+  /reports/{id}/output:
+    get:
+      operationId: getReportOutput
+      tags: [reports]
+      summary: Get report output only
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Report output
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /notifications:
+    get:
+      operationId: listNotifications
+      tags: [notifications]
+      summary: List user notifications
+      responses:
+        "200":
+          description: Notifications
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/NotificationItem"
+
+  /notifications/mark-all-read:
+    post:
+      operationId: markAllNotificationsRead
+      tags: [notifications]
+      summary: Mark all notifications as read
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+
+  /notifications/{id}/read:
+    patch:
+      operationId: markNotificationRead
+      tags: [notifications]
+      summary: Mark a notification as read
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+
+  /notifications/{id}:
+    delete:
+      operationId: deleteNotification
+      tags: [notifications]
+      summary: Delete a notification
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Deleted
+
+  /comments/{reportId}:
+    get:
+      operationId: listComments
+      tags: [comments]
+      summary: List comments for a report
+      parameters:
+        - name: reportId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: section
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Comments with profiles
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CommentsResponse"
+    post:
+      operationId: addComment
+      tags: [comments]
+      summary: Add a comment
+      parameters:
+        - name: reportId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddCommentBody"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+
+  /profiles/me:
+    get:
+      operationId: getMyProfile
+      tags: [profiles]
+      summary: Get current user profile
+      responses:
+        "200":
+          description: Profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProfileItem"
+
+  /ai/autofill-brief:
+    post:
+      operationId: autofillBrief
+      tags: [ai]
+      summary: Auto-fill form from a brief
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AutofillBriefBody"
+      responses:
+        "200":
+          description: Draft inputs
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /ai/complete-field:
+    post:
+      operationId: completeField
+      tags: [ai]
+      summary: AI complete a field
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CompleteFieldBody"
+      responses:
+        "200":
+          description: Completed text
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /ai/analyze-concept:
+    post:
+      operationId: analyzeConcept
+      tags: [ai]
+      summary: Run full FMART analysis
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AnalyzeConceptBody"
+      responses:
+        "200":
+          description: Feasibility report
+          content:
+            application/json:
+              schema:
+                type: object
+
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+        - status
+
+    ReportSummary:
+      type: object
+      properties:
+        id:
+          type: string
+        slug:
+          type: string
+        title:
+          type: string
+        industry:
+          type: string
+          nullable: true
+        status:
+          type: string
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+      required:
+        - id
+        - slug
+        - title
+        - status
+        - createdAt
+        - updatedAt
+
+    ReportRow:
+      type: object
+      properties:
+        id:
+          type: string
+        slug:
+          type: string
+        userId:
+          type: string
+        title:
+          type: string
+        industry:
+          type: string
+          nullable: true
+        inputs:
+          type: object
+        output:
+          type: object
+        status:
+          type: string
+        isPublic:
+          type: boolean
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+      required:
+        - id
+        - slug
+        - userId
+        - title
+        - inputs
+        - output
+        - status
+        - isPublic
+        - createdAt
+        - updatedAt
+
+    ReportCreated:
+      type: object
+      properties:
+        id:
+          type: string
+        slug:
+          type: string
+      required:
+        - id
+        - slug
+
+    CreateReportBody:
+      type: object
+      properties:
+        title:
+          type: string
+        industry:
+          type: string
+          nullable: true
+        inputs:
+          type: object
+        output:
+          type: object
+      required:
+        - title
+        - inputs
+        - output
+
+    UpdateReportStatusBody:
+      type: object
+      properties:
+        status:
+          type: string
+        note:
+          type: string
+          nullable: true
+      required:
+        - status
+
+    NotificationItem:
+      type: object
+      properties:
+        id:
+          type: string
+        kind:
+          type: string
+        title:
+          type: string
+        body:
+          type: string
+          nullable: true
+        url:
+          type: string
+          nullable: true
+        readAt:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+      required:
+        - id
+        - kind
+        - title
+        - createdAt
+
+    CommentItem:
+      type: object
+      properties:
+        id:
+          type: string
+        reportId:
+          type: string
+        userId:
+          type: string
+        section:
+          type: string
+          nullable: true
+        body:
+          type: string
+        createdAt:
+          type: string
+      required:
+        - id
+        - reportId
+        - userId
+        - body
+        - createdAt
+
+    CommentsResponse:
+      type: object
+      properties:
+        comments:
+          type: array
+          items:
+            $ref: "#/components/schemas/CommentItem"
+        profiles:
+          type: object
+      required:
+        - comments
+        - profiles
+
+    AddCommentBody:
+      type: object
+      properties:
+        body:
+          type: string
+        section:
+          type: string
+          nullable: true
+      required:
+        - body
+
+    ProfileItem:
+      type: object
+      properties:
+        userId:
+          type: string
+        displayName:
+          type: string
+          nullable: true
+        avatarUrl:
+          type: string
+          nullable: true
+      required:
+        - userId
+
+    AutofillBriefBody:
+      type: object
+      properties:
+        brief:
+          type: string
+      required:
+        - brief
+
+    CompleteFieldBody:
+      type: object
+      properties:
+        field:
+          type: string
+        partial:
+          type: string
+        inputs:
+          type: object
+      required:
+        - field
+        - partial
+        - inputs
+
+    AnalyzeConceptBody:
+      type: object
+      properties:
+        inputs:
+          type: object
+      required:
+        - inputs

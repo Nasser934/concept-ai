@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "Concept AI"
+version = "1.0.0"
+id = "artifacts/concept-ai"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 23178
+
+[services.development]
+run = "pnpm --filter @workspace/concept-ai run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/concept-ai", "run", "build" ]
+publicDir = "artifacts/concept-ai/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "23178"
+BASE_PATH = "/"
