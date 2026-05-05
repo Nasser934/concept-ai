@@ -17,24 +17,30 @@ import NotFound from "./pages/NotFound";
 import { useEffect, useRef } from "react";
 
 const queryClient = new QueryClient();
-
 const clerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
-
-const clerkProxyUrl = import.meta.env.VITE_CLERK_PROXY_URL;
-
+const clerkProxyUrl = import.meta.env.VITE_CLERK_PROXY_URL || undefined;
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
+const SIGN_IN_PATH = "/sign-in";
+const SIGN_UP_PATH = "/sign-up";
 
 function stripBase(path: string): string {
-  return basePath && path.startsWith(basePath)
-    ? path.slice(basePath.length) || "/"
-    : path;
+  if (!path) return "/";
+  if (/^https?:\/\//.test(path)) {
+    const url = new URL(path);
+    path = `${url.pathname}${url.search}${url.hash}`;
+  }
+  return basePath && path.startsWith(basePath) ? path.slice(basePath.length) || "/" : path;
+}
+
+function withBase(path: string): string {
+  return `${basePath}${path}` || path;
 }
 
 const clerkAppearance = {
   theme: shadcn,
   options: {
     logoPlacement: "inside" as const,
-    logoLinkUrl: basePath || "/",
+    logoLinkUrl: withBase("/"),
   },
   variables: {
     colorPrimary: "hsl(234, 56%, 60%)",
@@ -79,7 +85,7 @@ const clerkAppearance = {
 function SignInPage() {
   return (
     <div className="flex min-h-[100dvh] items-center justify-center bg-background px-4">
-      <SignIn routing="path" path={`${basePath}/sign-in`} signUpUrl={`${basePath}/sign-up`} />
+      <SignIn routing="path" path={withBase(SIGN_IN_PATH)} signUpUrl={withBase(SIGN_UP_PATH)} forceRedirectUrl={withBase("/dashboard")} />
     </div>
   );
 }
@@ -87,30 +93,33 @@ function SignInPage() {
 function SignUpPage() {
   return (
     <div className="flex min-h-[100dvh] items-center justify-center bg-background px-4">
-      <SignUp routing="path" path={`${basePath}/sign-up`} signInUrl={`${basePath}/sign-in`} />
+      <SignUp routing="path" path={withBase(SIGN_UP_PATH)} signInUrl={withBase(SIGN_IN_PATH)} forceRedirectUrl={withBase("/dashboard")} />
     </div>
   );
 }
 
 function ClerkQueryCacheInvalidator() {
   const { addListener } = useClerk();
-  const qc = queryClient;
   const prevUserIdRef = useRef<string | null | undefined>(undefined);
+
   useEffect(() => {
     const unsub = addListener(({ user }) => {
       const userId = user?.id ?? null;
       if (prevUserIdRef.current !== undefined && prevUserIdRef.current !== userId) {
-        qc.clear();
+        queryClient.clear();
       }
       prevUserIdRef.current = userId;
     });
     return unsub;
-  }, [addListener, qc]);
+  }, [addListener]);
+
   return null;
 }
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isSignedIn, isLoaded } = useUser();
+  const [location] = useLocation();
+
   if (!isLoaded) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
@@ -118,7 +127,11 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
       </div>
     );
   }
-  if (!isSignedIn) return <Redirect to="/sign-in" />;
+
+  if (!isSignedIn && location !== SIGN_IN_PATH) {
+    return <Redirect to={SIGN_IN_PATH} replace />;
+  }
+
   return <>{children}</>;
 }
 
@@ -126,8 +139,8 @@ function Router() {
   return (
     <Switch>
       <Route path="/" component={Index} />
-      <Route path="/sign-in/*?" component={SignInPage} />
-      <Route path="/sign-up/*?" component={SignUpPage} />
+      <Route path={`${SIGN_IN_PATH}/*?`} component={SignInPage} />
+      <Route path={`${SIGN_UP_PATH}/*?`} component={SignUpPage} />
       <Route path="/r/:slug" component={SharedReport} />
       <Route path="/analyze">
         <ProtectedRoute><Analyze /></ProtectedRoute>
@@ -148,13 +161,15 @@ function Router() {
 
 function ClerkProviderWithRoutes() {
   const [, setLocation] = useLocation();
+
   return (
     <ClerkProvider
       publishableKey={clerkPubKey}
       proxyUrl={clerkProxyUrl}
       appearance={clerkAppearance}
-      signInUrl={`${basePath}/sign-in`}
-      signUpUrl={`${basePath}/sign-up`}
+      signInUrl={withBase(SIGN_IN_PATH)}
+      signUpUrl={withBase(SIGN_UP_PATH)}
+      afterSignOutUrl={withBase(SIGN_IN_PATH)}
       localization={{
         signIn: { start: { title: "Welcome back", subtitle: "Sign in to your Concept AI account" } },
         signUp: { start: { title: "Create your account", subtitle: "Start analyzing your ideas with AI" } },
