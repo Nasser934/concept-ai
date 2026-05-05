@@ -4,6 +4,7 @@ import { Loader2 } from "lucide-react";
 
 export const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { isSignedIn, isLoaded } = useUser();
+
   if (!isLoaded) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
@@ -11,6 +12,10 @@ export const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
       </div>
     );
   }
-  if (!isSignedIn) return <Redirect to="/sign-in" />;
+
+  if (!isSignedIn) {
+    return <Redirect to="/sign-in" replace />;
+  }
+
   return <>{children}</>;
 };
